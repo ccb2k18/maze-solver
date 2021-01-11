@@ -3,7 +3,6 @@ var nRows = 15;
 var nCols = 30;
 var maze = null;
 var infoButton = null;
-var selectingStates = new Array(2);
 
 // reference to previously selected start block
 var prevStart = [null];
@@ -24,7 +23,7 @@ function main() {
 	maze = new MazeStructure(nRows, nCols);
 	for (let i = 0; i < maze.size(); i++) {
 
-		maze.setAt(i, new Block(prevStart, prevEnd, mode, i, false, "maze-structure"));
+		maze.setAt(i, new Block(prevStart, prevEnd, mode, i, false, "maze-structure", nRows, nCols));
 		if ((i + 1) % nCols == 0) {
 
 			document.getElementById("maze-structure").appendChild(document.createElement("br"));
@@ -47,10 +46,7 @@ function main() {
 			mode[0] = 0;
 		} else if (event.key == "c") {
 
-			for (let i = 0; i < maze.size(); i++) {
-
-				maze.getAt(i).element.setAttribute("class", "free");
-			}
+			maze.clearBlocks();
 		}
 		mode[1](mode);
 		
