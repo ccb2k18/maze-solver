@@ -4,11 +4,6 @@ var nCols = 30;
 var maze = null;
 var infoButton = null;
 
-// reference to previously selected start block
-var prevStart = [null];
-// reference to previously selected end block
-var prevEnd = [null];
-
 var modeTexts = ["wall select/delete", "select start block", "select end block"];
 
 function changeModeText(mode) {
@@ -27,7 +22,7 @@ function main() {
 	maze = new MazeStructure(nRows, nCols);
 	for (let i = 0; i < maze.size(); i++) {
 
-		maze.setAt(i, new Block(prevStart, prevEnd, mode, i, false, "maze-structure", nCols));
+		maze.setAt(i, new Block(maze, mode, i, false, "maze-structure", nCols));
 		if ((i + 1) % nCols == 0) {
 
 			document.getElementById("maze-structure").appendChild(document.createElement("br"));

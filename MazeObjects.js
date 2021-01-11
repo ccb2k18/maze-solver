@@ -5,17 +5,17 @@ class Block {
 	static startBlockIndex = null;
 	static endBlockIndex = null;
 	// this method determines how to change blocks based on the current user mode
-	static changeBlock(prevStart, prevEnd, mode, element, index) {
+	static changeBlock(maze, mode, element, index) {
 
 		if (mode[0] == 0) {
 
 			Block.changeWall(mode, element);
 		} else if (mode[0] == 1) {
 
-			Block.selectStart(prevStart, mode, element, index);
+			Block.selectStart(maze, mode, element, index);
 		} else if (mode[0] == 2) {
 
-			Block.selectEnd(prevEnd, mode, element, index);
+			Block.selectEnd(maze, mode, element, index);
 		}
 		mode[1](mode);
 	}
@@ -33,36 +33,34 @@ class Block {
 	}
 
 	// select the starting block (this can only be done once)
-	static selectStart(prevStart, mode, element, index) {
+	static selectStart(maze, mode, element, index) {
 
 		element.setAttribute("class", "start");
 		// we are now back to wall select/delete mode
 		mode[0] = 0;
 		// if there was a previous start
-		if (prevStart[0] != null) {
+		if (Block.startBlockIndex != null && index != Block.startBlockIndex) {
 
-			prevStart[0].setAttribute("class", "free");
+			maze.getAt(Block.startBlockIndex).element.setAttribute("class", "free");
 		}
-		prevStart[0] = element;
 		Block.startBlockIndex = index;
 	}
 
 	// select the ending block (this can only be done once)
-	static selectEnd(prevEnd, mode, element, index) {
+	static selectEnd(maze, mode, element, index) {
 
 		element.setAttribute("class", "end");
 		// we are now back to wall select/delete mode
 		mode[0] = 0;
-		// if there was a previous start
-		if (prevEnd[0] != null) {
+		// if there was a previous end
+		if (Block.endBlockIndex != null && index != Block.endBlockIndex) {
 
-			prevEnd[0].setAttribute("class", "free");
+			maze.getAt(Block.endBlockIndex).element.setAttribute("class", "free");
 		}
-		prevEnd[0] = element;
 		Block.endBlockIndex = index;
 	}
 
-	constructor(prevStart, prevEnd, globalMode, index, isWall, divIDString, nCols) {
+	constructor(maze, globalMode, index, isWall, divIDString, nCols) {
 
 		// index in the array
 		this.index = index;
@@ -75,7 +73,7 @@ class Block {
 		// add event listener for clicks
 		this.element.addEventListener("click", function () {
 
-			Block.changeBlock(prevStart, prevEnd, globalMode, this, index);
+			Block.changeBlock(maze, globalMode, this, index);
 		});
 	}
 
@@ -153,7 +151,7 @@ class MazeAI {
 		return (block.row + 1) * this.maze.nCols + block.col;
 	}
 
-	indexOfLeftBlock(blockRow, blockCol) {
+	indexOfLeftBlock(block) {
 
 		return block.row * this.maze.nCols + (block.col - 1);
 	}
@@ -201,7 +199,7 @@ class MazeAI {
 
 	fillPath() {
 
-		for (let i = 0; i < this.pathStack.length; i++) {
+		for (let i = 1; i < this.pathStack.length - 1; i++) {
 
 			this.pathStack[i].element.setAttribute("class", "path");
 		}
@@ -211,12 +209,13 @@ class MazeAI {
 
 		if (this.pathStack != null) {
 
-			for (let i = 0; i < this.pathStack.length; i++) {
+			for (let i = 1; i < this.pathStack.length - 1; i++) {
 
 				this.pathStack[i].element.setAttribute("class", "free");
 			}
+			this.pathStack = null;
+		document.getElementById("ai-message").innerText = "";
 		}
-		this.pathStack = null;
 	}
 
 	findSolution() {
@@ -232,13 +231,17 @@ class MazeAI {
 		var startBlock = this.maze.getAt(Block.startBlockIndex);
 		// began recursion here
 		var solved = this.traverse(startBlock, pathStack);
+		// clear the hash table
+		this.visitedBlocks = null;
+		this.visitedBlocks = new HashTable(this.maze.nRows * this.maze.nCols * 5);
 		if (solved) {
 
 			this.pathStack = pathStack;
 			this.fillPath();
+			document.getElementById("ai-message").innerText = "AI: The maze has been solved!";
 		} else {
 
-			return null;
+			document.getElementById("ai-message").innerText = "AI: There is no solution path.";
 		}
 	}
 
@@ -263,7 +266,11 @@ class MazeAI {
 			var upBlock = this.maze.getAt(this.indexOfUpBlock(block));
 			if (this.haveNotVisited(upBlock) && upBlock.isTraversable()) {
 
-				return this.traverse(upBlock, pathStack);
+				var solved = this.traverse(upBlock, pathStack);
+				if (solved) {
+
+					return solved;
+				}
 			}
 		}
 
@@ -273,7 +280,11 @@ class MazeAI {
 			var rightBlock = this.maze.getAt(this.indexOfRightBlock(block));
 			if (this.haveNotVisited(rightBlock) && rightBlock.isTraversable()) {
 
-				return this.traverse(rightBlock, pathStack);
+				var solved = this.traverse(rightBlock, pathStack);
+				if (solved) {
+
+					return solved;
+				}
 			}
 		}
 
@@ -283,7 +294,11 @@ class MazeAI {
 			var downBlock = this.maze.getAt(this.indexOfDownBlock(block));
 			if (this.haveNotVisited(downBlock) && downBlock.isTraversable()) {
 
-				return this.traverse(downBlock, pathStack);
+				var solved = this.traverse(downBlock, pathStack);
+				if (solved) {
+
+					return solved;
+				}
 			}
 		}
 
@@ -293,7 +308,11 @@ class MazeAI {
 			var leftBlock = this.maze.getAt(this.indexOfLeftBlock(block));
 			if (this.haveNotVisited(leftBlock) && leftBlock.isTraversable()) {
 
-				return this.traverse(leftBlock, pathStack);
+				var solved = this.traverse(leftBlock, pathStack);
+				if (solved) {
+
+					return solved;
+				}
 			}
 		}
 
