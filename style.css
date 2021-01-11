@@ -1,0 +1,106 @@
+
+body {
+
+	background-color: darkred;
+}
+
+#title-text {
+
+	text-align: center;
+	margin: 2vw 0px 2vw 0px;
+	font-size: 6vw;
+	color: white;
+	font-family: sans-serif;
+}
+
+/*style for starting block of maze*/
+.start {
+
+	padding: 1vw;
+	border: 1px solid white;
+	background-color: green;
+	display: inline-block;
+}
+
+/*style for ending block of maze*/
+.end {
+
+	padding: 1vw;
+	border: 1px solid white;
+	background-color: orange;
+	display: inline-block;
+}
+
+/*style for computer solution path*/
+.path {
+
+	padding: 1vw;
+	border: 1px solid white;
+	background-color: white;
+	display: inline-block;
+}
+
+/*style for wall block (non-traversable block)*/
+.wall {
+
+	padding: 1vw;
+	border: 1px solid white;
+	background-color: black;
+	display: inline-block;
+}
+
+/*style for free or open block (traversable block)*/
+.free {
+
+	padding: 1vw;
+	border: 1px solid white;
+	background-color: blue;
+	display: inline-block;
+}
+
+.p-text {
+
+	margin: 1vw 0px 1vw 0px;
+	font-size: 2vw;
+	color: white;
+	font-family: serif;
+	visibility: show;
+}
+
+.p-text-hidden {
+
+	margin: 1vw 0px 1vw 0px;
+	font-size: 2vw;
+	color: white;
+	font-family: serif;
+	visibility: hidden;
+}
+
+#maze-structure {
+
+	text-align: center;
+	line-height: 0px;
+	margin-bottom: 5vw;
+}
+
+#info-icon {
+
+	width: 5%;
+	filter: invert(0.5);
+	left: 1vw;
+	top: 1vw;
+	position: absolute;
+	display: inline-block;
+}
+
+#info-icon:hover {
+
+	filter: invert(1.0);
+}
+
+#mode-view {
+
+	position: fixed;
+	right: 2vw;
+	top: 1vw;
+}
