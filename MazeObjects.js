@@ -2,20 +2,20 @@
 // block object for maze that represents a position in the maze matrix
 class Block {
 
-	static startBlock = null;
-	static endBlock = null;
+	static startBlockIndex = null;
+	static endBlockIndex = null;
 	// this method determines how to change blocks based on the current user mode
-	static changeBlock(prevStart, prevEnd, mode, element) {
+	static changeBlock(prevStart, prevEnd, mode, element, index) {
 
 		if (mode[0] == 0) {
 
 			Block.changeWall(mode, element);
 		} else if (mode[0] == 1) {
 
-			Block.selectStart(prevStart, mode, element);
+			Block.selectStart(prevStart, mode, element, index);
 		} else if (mode[0] == 2) {
 
-			Block.selectEnd(prevEnd, mode, element);
+			Block.selectEnd(prevEnd, mode, element, index);
 		}
 		mode[1](mode);
 	}
@@ -33,7 +33,7 @@ class Block {
 	}
 
 	// select the starting block (this can only be done once)
-	static selectStart(prevStart, mode, element) {
+	static selectStart(prevStart, mode, element, index) {
 
 		element.setAttribute("class", "start");
 		// we are now back to wall select/delete mode
@@ -44,11 +44,11 @@ class Block {
 			prevStart[0].setAttribute("class", "free");
 		}
 		prevStart[0] = element;
-		Block.startBlock = element;
+		Block.startBlockIndex = index;
 	}
 
 	// select the ending block (this can only be done once)
-	static selectEnd(prevEnd, mode, element) {
+	static selectEnd(prevEnd, mode, element, index) {
 
 		element.setAttribute("class", "end");
 		// we are now back to wall select/delete mode
@@ -59,23 +59,23 @@ class Block {
 			prevEnd[0].setAttribute("class", "free");
 		}
 		prevEnd[0] = element;
-		Block.endBlock = element;
+		Block.endBlockIndex = index;
 	}
 
-	constructor(prevStart, prevEnd, globalMode, index, isWall, divIDString, nRows, nCols) {
+	constructor(prevStart, prevEnd, globalMode, index, isWall, divIDString, nCols) {
 
 		// index in the array
 		this.index = index;
 		// row number and column number for checking maze boundaries
-		this.rowNum = Math.floor(index / nRows);
-		this.colNum = index % nCols; 
+		this.row = Math.floor(index / nCols);
+		this.col = index % nCols; 
 		this.element = document.createElement("div");
 		this.element.setAttribute("class", "free");
 		document.getElementById(divIDString).appendChild(this.element);
 		// add event listener for clicks
 		this.element.addEventListener("click", function () {
 
-			Block.changeBlock(prevStart, prevEnd, globalMode, this);
+			Block.changeBlock(prevStart, prevEnd, globalMode, this, index);
 		});
 	}
 
@@ -132,39 +132,58 @@ class MazeAI {
 
 		// the maze structure
 		this.maze = maze;
+		this.pathStack = null;
 		// keep track of visited blocks in a hash table
 		this.visitedBlocks = new HashTable(this.maze.nRows * this.maze.nCols * 5);
 
 	}
 
-	// determine index of above block
-	indexOfUpBlock(blockRow, blockCol) {
+	indexOfUpBlock(block) {
 
-		return (blockRow - 1) * this.maze.nRows + blockCol;
+		return (block.row - 1) * this.maze.nCols + block.col;
 	}
 
-	// determine index of right block
-	indexOfRightBlock(blockRow, blockCol) {
+	indexOfRightBlock(block) {
 
-		return blockRow * this.maze.nRows + (blockCol + 1);
+		return block.row * this.maze.nCols + (block.col + 1);
 	}
 
-	// determine index of below block
-	indexOfDownBlock(blockRow, blockCol) {
+	indexOfDownBlock(block) {
 
-		return (blockRow + 1) * this.maze.nRows + blockCol;
+		return (block.row + 1) * this.maze.nCols + block.col;
 	}
 
-	// determine index of left block
-	indexOfRightBlock(blockRow, blockCol) {
+	indexOfLeftBlock(blockRow, blockCol) {
 
-		return blockRow * this.maze.nRows + (blockCol - 1);
+		return block.row * this.maze.nCols + (block.col - 1);
+	}
+
+	rowColOfUpBlock(block) {
+
+		return [block.row - 1, block.col];
+	}
+
+	rowColOfRightBlock(block) {
+
+		return [block.row, block.col + 1];
+	}
+
+	rowColOfDownBlock(block) {
+
+		return [block.row + 1, block.col];
+	}
+
+	rowColOfLeftBlock(block) {
+
+		return [block.row, block.col - 1];
 	}
 
 	// returns true if the coordinate is outside of the maze
-	isOutOfBounds(blockRow, blockCol) {
+	isOutOfBounds(blockCoords) {
 
-		return blockRow < -1 || blockRow >= this.maze.nRows || blockCol < -1 && blockCol >= this.maze.nCols;
+		var blockRow = blockCoords[0];
+		var blockCol = blockCoords[1];
+		return blockRow < 0 || blockRow >= this.maze.nRows || blockCol < 0 || blockCol >= this.maze.nCols;
 	}
 
 	// returns true if we haven't visited it before
@@ -173,17 +192,50 @@ class MazeAI {
 		return (this.visitedBlocks.getElementAt(block.index.toString()) == null);
 	}
 
+	// marks the block as visited so we never go to it again
+	markAsVisited(block) {
+
+		this.visitedBlocks.setElementAt(block.index.toString(), block);
+
+	}
+
+	fillPath() {
+
+		for (let i = 0; i < this.pathStack.length; i++) {
+
+			this.pathStack[i].element.setAttribute("class", "path");
+		}
+	}
+
+	clearPath() {
+
+		if (this.pathStack != null) {
+
+			for (let i = 0; i < this.pathStack.length; i++) {
+
+				this.pathStack[i].element.setAttribute("class", "free");
+			}
+		}
+		this.pathStack = null;
+	}
+
 	findSolution() {
 
+		// if the start block or end block is not defined we cannot solve the maze
+		if (Block.startBlockIndex == null || Block.endBlockIndex == null) {
+
+			return null;
+		}
 		// a JavaScript array implemented as a stack for saving our solution path if it exists
 		var pathStack = new Array();
 		// retrieve the start block
-		var startBlock = Blocks.startBlock;
+		var startBlock = this.maze.getAt(Block.startBlockIndex);
 		// began recursion here
-		var solved = traverse(startBlock, pathStack);
+		var solved = this.traverse(startBlock, pathStack);
 		if (solved) {
 
-			return pathStack;
+			this.pathStack = pathStack;
+			this.fillPath();
 		} else {
 
 			return null;
@@ -194,19 +246,61 @@ class MazeAI {
 
 		// our policy is: up right down left
 
-		// first check if we reached the end
-		if (block.equals(Blocks.endBlock)) {
+		// immediately add the block to the visited hashtable
+		this.markAsVisited(block);
+		// also push this block onto the stack
+		pathStack.push(block);
 
-			// add the end to the stack
-			pathStack.push(block);
+		// first check if we reached the end
+		if (block.equals(this.maze.getAt(Block.endBlockIndex))) {
+
 			return true;
 		}
 
-		// first we check up
-		if (!isOutOfBounds(indexOfUpBlock(block)) && haveNotVisited(block) && block.isTraversable()) {
+		// then we check the up block
+		if (!this.isOutOfBounds(this.rowColOfUpBlock(block))) {
 
+			var upBlock = this.maze.getAt(this.indexOfUpBlock(block));
+			if (this.haveNotVisited(upBlock) && upBlock.isTraversable()) {
 
+				return this.traverse(upBlock, pathStack);
+			}
 		}
+
+		// then the right block
+		if (!this.isOutOfBounds(this.rowColOfRightBlock(block))) {
+
+			var rightBlock = this.maze.getAt(this.indexOfRightBlock(block));
+			if (this.haveNotVisited(rightBlock) && rightBlock.isTraversable()) {
+
+				return this.traverse(rightBlock, pathStack);
+			}
+		}
+
+		// then the down block
+		if (!this.isOutOfBounds(this.rowColOfDownBlock(block))) {
+
+			var downBlock = this.maze.getAt(this.indexOfDownBlock(block));
+			if (this.haveNotVisited(downBlock) && downBlock.isTraversable()) {
+
+				return this.traverse(downBlock, pathStack);
+			}
+		}
+
+		// then the left block
+		if (!this.isOutOfBounds(this.rowColOfLeftBlock(block))) {
+
+			var leftBlock = this.maze.getAt(this.indexOfLeftBlock(block));
+			if (this.haveNotVisited(leftBlock) && leftBlock.isTraversable()) {
+
+				return this.traverse(leftBlock, pathStack);
+			}
+		}
+
+		// after we have exhausted all our options we must pop this block from the stack and return
+		// to our previous caller
+		pathStack.pop();
+		return false;	
 
 	}
 

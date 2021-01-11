@@ -17,13 +17,17 @@ function changeModeText(mode) {
 }
 
 var mode = [0, changeModeText];
+
+// the ai of the maze
+var ai = null;
+
 function main() {
 
 	// create the maze
 	maze = new MazeStructure(nRows, nCols);
 	for (let i = 0; i < maze.size(); i++) {
 
-		maze.setAt(i, new Block(prevStart, prevEnd, mode, i, false, "maze-structure", nRows, nCols));
+		maze.setAt(i, new Block(prevStart, prevEnd, mode, i, false, "maze-structure", nCols));
 		if ((i + 1) % nCols == 0) {
 
 			document.getElementById("maze-structure").appendChild(document.createElement("br"));
@@ -32,6 +36,8 @@ function main() {
 	// create an info button to toggle on and off the instructions displaying
 	infoButton = new ToggleButton(document.getElementById("info-icon"), document.getElementById("instructions"), "p-text-hidden", "p-text");
 
+	// create the ai
+	ai = new MazeAI(maze);
 	// add listeners for different keys
 	document.addEventListener("keyup", function (event) {
 
@@ -47,11 +53,20 @@ function main() {
 		} else if (event.key == "c") {
 
 			maze.clearBlocks();
+		} else if (event.key == "Enter") {
+
+			ai.clearPath();
+			ai.findSolution();
 		}
 		mode[1](mode);
 		
 
 	});
+
+	document.addEventListener("click", function (event) {
+
+		ai.clearPath();
+	})
 }
 
 
