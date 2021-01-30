@@ -87,6 +87,16 @@ class Block {
 		return (this.index == otherBlock.index);
 	}
 
+	distanceToBlock(block) {
+
+		return Math.sqrt((this.row-block.row)**2 + (this.col-block.col)**2);
+	}
+
+	getRowCol() {
+
+		return [this.row, this.col];
+	}
+
 }
 
 
@@ -176,6 +186,11 @@ class MazeAI {
 		return [block.row, block.col - 1];
 	}
 
+	getIndexOfRowCol(blockCoords) {
+
+		return blockCoords[0] * this.maze.nCols + blockCoords[1];
+	}
+
 	// returns true if the coordinate is outside of the maze
 	isOutOfBounds(blockCoords) {
 
@@ -218,6 +233,43 @@ class MazeAI {
 		}
 	}
 
+	sortBasedOnDistanceToEnd(arrayOfBlocks) {
+
+		var endBlock = this.maze.getAt(Block.endBlockIndex);
+		while (true) {
+
+			let numSwaps = 0;
+			for (let i = 0; i < arrayOfBlocks.length - 1; i++) {
+
+				if (arrayOfBlocks[i].distanceToBlock(endBlock) > arrayOfBlocks[i+1].distanceToBlock(endBlock)) {
+
+					var tmpBlock = arrayOfBlocks[i];
+					arrayOfBlocks[i] = arrayOfBlocks[i+1];
+					arrayOfBlocks[i+1] = tmpBlock;
+					numSwaps++;
+				}
+			}
+			if (numSwaps == 0) {
+
+				break;
+			}
+		}
+	}
+
+	// returns true if the block is invalid or does not exist
+	isValid(blockCoords) {
+
+		if (!this.isOutOfBounds(blockCoords)) {
+
+			var block = this.maze.getAt(this.getIndexOfRowCol(blockCoords));
+			if (this.haveNotVisited(block) && block.isTraversable()) {
+
+				return true;
+			}
+		}
+		return false;
+	}
+
 	findSolution() {
 
 		// if the start block or end block is not defined we cannot solve the maze
@@ -249,6 +301,7 @@ class MazeAI {
 
 		// our policy is: up right down left
 
+		console.log(block);
 		// immediately add the block to the visited hashtable
 		this.markAsVisited(block);
 		// also push this block onto the stack
@@ -260,61 +313,34 @@ class MazeAI {
 			return true;
 		}
 
-		// then we check the up block
-		if (!this.isOutOfBounds(this.rowColOfUpBlock(block))) {
+		// obtain an array of all four block coords to go to
+		var blockCoordsArr = [this.rowColOfUpBlock(block),
+			this.rowColOfRightBlock(block), this.rowColOfDownBlock(block),
+				this.rowColOfLeftBlock(block)];
 
-			var upBlock = this.maze.getAt(this.indexOfUpBlock(block));
-			if (this.haveNotVisited(upBlock) && upBlock.isTraversable()) {
+		var blocksArr = [];
+		// filter out all invalid options
+		for (let i = 0; i < blockCoordsArr.length; i++) {
 
-				var solved = this.traverse(upBlock, pathStack);
-				if (solved) {
+			if (this.isValid(blockCoordsArr[i])) {
 
-					return solved;
-				}
+				blocksArr.push(this.maze.getAt(this.getIndexOfRowCol(blockCoordsArr[i])));
 			}
 		}
 
-		// then the right block
-		if (!this.isOutOfBounds(this.rowColOfRightBlock(block))) {
+		// sort the blocks
+		this.sortBasedOnDistanceToEnd(blocksArr);
 
-			var rightBlock = this.maze.getAt(this.indexOfRightBlock(block));
-			if (this.haveNotVisited(rightBlock) && rightBlock.isTraversable()) {
 
-				var solved = this.traverse(rightBlock, pathStack);
-				if (solved) {
+		for (let i = 0; i < blocksArr.length; i++) {
 
-					return solved;
-				}
+			var solved = this.traverse(blocksArr[i], pathStack);
+			if (solved) {
+
+				return true;
 			}
 		}
 
-		// then the down block
-		if (!this.isOutOfBounds(this.rowColOfDownBlock(block))) {
-
-			var downBlock = this.maze.getAt(this.indexOfDownBlock(block));
-			if (this.haveNotVisited(downBlock) && downBlock.isTraversable()) {
-
-				var solved = this.traverse(downBlock, pathStack);
-				if (solved) {
-
-					return solved;
-				}
-			}
-		}
-
-		// then the left block
-		if (!this.isOutOfBounds(this.rowColOfLeftBlock(block))) {
-
-			var leftBlock = this.maze.getAt(this.indexOfLeftBlock(block));
-			if (this.haveNotVisited(leftBlock) && leftBlock.isTraversable()) {
-
-				var solved = this.traverse(leftBlock, pathStack);
-				if (solved) {
-
-					return solved;
-				}
-			}
-		}
 
 		// after we have exhausted all our options we must pop this block from the stack and return
 		// to our previous caller
